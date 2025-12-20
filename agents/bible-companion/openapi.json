@@ -1,0 +1,252 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Bible Companion Agent API",
+    "version": "1.0.0",
+    "description": "Actions for the Bible Companion conversational agent"
+  },
+  "paths": {
+    "/getUserPreferences": {
+      "get": {
+        "operationId": "getUserPreferences",
+        "summary": "Get user preferences from database",
+        "description": "Retrieves user preferences including name, denomination, bible version, birthday, and avatar name",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User preferences retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferences"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getConversationMemory": {
+      "get": {
+        "operationId": "getConversationMemory",
+        "summary": "Get recent conversation memories",
+        "description": "Retrieves recent conversation summaries for context continuity",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5
+            },
+            "description": "Number of recent memories to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversation memories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/saveSessionSummary": {
+      "post": {
+        "operationId": "saveSessionSummary",
+        "summary": "Save conversation session summary",
+        "description": "Saves a summary of the conversation session for future context",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionSummary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session summary saved successfully"
+          }
+        }
+      }
+    },
+    "/checkFirstTimeToday": {
+      "get": {
+        "operationId": "checkFirstTimeToday",
+        "summary": "Check if user has talked today",
+        "description": "Determines if this is the user's first conversation today for greeting selection",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isFirstTimeToday": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UserPreferences": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "avatarName": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string",
+            "format": "date"
+          },
+          "denomination": {
+            "type": "string",
+            "enum": ["Catholic", "Protestant", "Orthodox", "Evangelical", "Mainline", "Other"]
+          },
+          "bibleVersion": {
+            "type": "string",
+            "enum": ["KJV", "NIV", "ESV", "NRSV", "NLT", "NASB"]
+          }
+        },
+        "required": ["userId", "firstName", "bibleVersion"]
+      },
+      "MemoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "keyPoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spiritualThemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versesShared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userSentiment": {
+            "type": "string"
+          }
+        }
+      },
+      "SessionSummary": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "keyPoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spiritualThemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versesShared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reflectionQuestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nextSteps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userSentiment": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "sessionId", "keyPoints"]
+      }
+    }
+  }
+}

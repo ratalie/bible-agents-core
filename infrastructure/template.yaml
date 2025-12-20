@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Bible Agents Infrastructure - Bedrock Agent Core
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    MemorySize: 256
+
+Resources:
+  # DynamoDB Tables
+  UserPreferencesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub bible-user-preferences-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+
+  ConversationMemoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub bible-conversation-memory-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+
+  DailyVersesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub bible-daily-verses-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: date
+          KeyType: HASH
+
+  # Lambda Functions
+  BibleCompanionLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bible-companion-actions-${Environment}
+      CodeUri: ../agents/bible-companion/lambda/
+      Handler: index.lambda_handler
+      Environment:
+        Variables:
+          USER_PREFS_TABLE: !Ref UserPreferencesTable
+          MEMORY_TABLE: !Ref ConversationMemoryTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserPreferencesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ConversationMemoryTable
+
+  VerseOfTheDayLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub verse-of-the-day-actions-${Environment}
+      CodeUri: ../agents/verse-of-the-day/lambda/
+      Handler: index.lambda_handler
+      Environment:
+        Variables:
+          VERSES_TABLE: !Ref DailyVersesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DailyVersesTable
+
+  # Lambda permissions for Bedrock
+  BibleCompanionLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BibleCompanionLambda
+      Action: lambda:InvokeFunction
+      Principal: bedrock.amazonaws.com
+
+  VerseOfTheDayLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref VerseOfTheDayLambda
+      Action: lambda:InvokeFunction
+      Principal: bedrock.amazonaws.com
+
+Outputs:
+  BibleCompanionLambdaArn:
+    Description: ARN of Bible Companion Lambda
+    Value: !GetAtt BibleCompanionLambda.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-BibleCompanionLambdaArn
+
+  VerseOfTheDayLambdaArn:
+    Description: ARN of Verse of the Day Lambda
+    Value: !GetAtt VerseOfTheDayLambda.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-VerseOfTheDayLambdaArn
+
+  UserPreferencesTableName:
+    Description: Name of User Preferences DynamoDB table
+    Value: !Ref UserPreferencesTable
+
+  ConversationMemoryTableName:
+    Description: Name of Conversation Memory DynamoDB table
+    Value: !Ref ConversationMemoryTable
+
+  DailyVersesTableName:
+    Description: Name of Daily Verses DynamoDB table
+    Value: !Ref DailyVersesTable

@@ -1,0 +1,112 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Verse of the Day Agent API",
+    "version": "1.0.0",
+    "description": "Actions for the Daily Verse agent"
+  },
+  "paths": {
+    "/getVerseOfTheDay": {
+      "get": {
+        "operationId": "getVerseOfTheDay",
+        "summary": "Get the verse of the day",
+        "description": "Retrieves the scheduled verse(s) for today",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Optional date to get verse for (defaults to today)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verse retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyVerse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getVerseByReference": {
+      "get": {
+        "operationId": "getVerseByReference",
+        "summary": "Get verse by reference",
+        "description": "Retrieves a specific verse by its reference",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Bible verse reference (e.g., 'John 3:16', 'Psalm 23:1-6')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verse retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Verse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DailyVerse": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of verse references for today"
+          },
+          "theme": {
+            "type": "string",
+            "description": "Optional theme for the day"
+          }
+        },
+        "required": ["date", "references"]
+      },
+      "Verse": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string",
+            "default": "KJV"
+          }
+        },
+        "required": ["reference", "text"]
+      }
+    }
+  }
+}
