@@ -1,0 +1,379 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Bible Companion Agent API with Memory",
+    "version": "2.0.0",
+    "description": "Enhanced actions for the Bible Companion agent with AgentCore Memory integration"
+  },
+  "paths": {
+    "/getUserPreferences": {
+      "get": {
+        "operationId": "getUserPreferences",
+        "summary": "Get user preferences from database",
+        "description": "Retrieves user preferences including name, denomination, bible version, birthday, and avatar name",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User preferences retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreferences"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getConversationMemory": {
+      "get": {
+        "operationId": "getConversationMemory",
+        "summary": "Get enhanced conversation memories",
+        "description": "Retrieves both short-term (recent sessions) and long-term (AgentCore) memories for comprehensive context",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5
+            },
+            "description": "Number of recent memories to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enhanced memories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnhancedMemory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retrieveMemory": {
+      "get": {
+        "operationId": "retrieveMemory",
+        "summary": "Retrieve specific memories by query",
+        "description": "Search AgentCore long-term memory for specific topics or themes",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query for specific memories (e.g., 'prayer requests', 'family struggles')"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorySearchResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/saveSessionSummary": {
+      "post": {
+        "operationId": "saveSessionSummary",
+        "summary": "Save enhanced session summary",
+        "description": "Saves session to both DynamoDB (short-term) and AgentCore Memory (long-term)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionSummary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session summary saved to both storage systems",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkFirstTimeToday": {
+      "get": {
+        "operationId": "checkFirstTimeToday",
+        "summary": "Check if user has talked today",
+        "description": "Determines if this is the user's first conversation today for greeting selection",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isFirstTimeToday": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UserPreferences": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "avatarName": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string",
+            "format": "date"
+          },
+          "denomination": {
+            "type": "string",
+            "enum": ["Catholic", "Protestant", "Orthodox", "Evangelical", "Mainline", "Other"]
+          },
+          "bibleVersion": {
+            "type": "string",
+            "enum": ["KJV", "NIV", "ESV", "NRSV", "NLT", "NASB"]
+          }
+        },
+        "required": ["userId", "firstName", "bibleVersion"]
+      },
+      "EnhancedMemory": {
+        "type": "object",
+        "properties": {
+          "shortTerm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemoryEntry"
+            },
+            "description": "Recent conversation sessions from DynamoDB"
+          },
+          "longTerm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentCoreMemory"
+            },
+            "description": "Long-term insights from AgentCore Memory"
+          },
+          "userId": {
+            "type": "string"
+          }
+        }
+      },
+      "MemoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "keyPoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spiritualThemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versesShared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userSentiment": {
+            "type": "string"
+          }
+        }
+      },
+      "AgentCoreMemory": {
+        "type": "object",
+        "properties": {
+          "memoryId": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "relevanceScore": {
+            "type": "number"
+          }
+        }
+      },
+      "MemorySearchResult": {
+        "type": "object",
+        "properties": {
+          "memories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentCoreMemory"
+            }
+          },
+          "query": {
+            "type": "string"
+          }
+        }
+      },
+      "SessionSummary": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "keyPoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "spiritualThemes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "versesShared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reflectionQuestions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nextSteps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userSentiment": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "sessionId", "keyPoints"]
+      },
+      "SaveResult": {
+        "type": "object",
+        "properties": {
+          "dynamodb": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string"
+              }
+            }
+          },
+          "agentcore": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "memoryId": {
+                "type": "string"
+              }
+            }
+          },
+          "sessionId": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
