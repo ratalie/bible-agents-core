@@ -15,12 +15,13 @@ runtime_config = {
     }
 }
 
-# Memory configuration
+# Memory configuration with user isolation
 memory_config = MemoryConfig(
     short_term_retention_days=7,
     long_term_retention_days=365,
     auto_summarize=True,
-    user_attributes_enabled=True
+    user_attributes_enabled=True,
+    user_isolation=True  # Key: Each user gets isolated memory
 )
 
 # Deploy to AgentCore Runtime

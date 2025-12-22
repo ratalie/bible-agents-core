@@ -1,12 +1,14 @@
-from bedrock_agentcore.runtime import Agent, Memory
-from bedrock_agentcore.tools import Tool
-import json
+from bedrock_agentcore.runtime import Agent
+import boto3
 import pymysql
 import os
+import json
+import time
 from datetime import datetime
 
-# Initialize AgentCore Memory
-memory = Memory()
+# Initialize AgentCore Memory client
+agentcore_client = boto3.client('bedrock-agentcore', region_name='us-east-1')
+MEMORY_ID = os.environ.get('MEMORY_ID', 'memory_bqdqb-jtj3lc48bl')
 
 # MySQL connection
 def get_mysql_connection():
@@ -19,76 +21,98 @@ def get_mysql_connection():
         charset='utf8mb4'
     )
 
-@Agent(
-    name="bible-companion",
-    description="Personalized Bible companion with memory",
-    memory=memory
-)
-def bible_companion(input_text: str, user_id: str, session_id: str):
+def bible_companion(input_text: str, user_id: str = None, session_id: str = None):
     """
     Bible Companion agent with AgentCore Memory integration.
     """
     
-    # Auto-load user context from database
+    # Extract user_id from session attributes if not provided
+    if not user_id:
+        user_id = "default-user"
+    if not session_id:
+        session_id = f"session-{int(time.time())}"
+    
+    # Get user preferences from MySQL
     preferences = get_user_preferences(user_id)
-    context = memory.get_context(user_id, session_id)
     
-    # Check if first time today
-    is_first_time = memory.is_first_interaction_today(user_id)
+    # Get conversation context from AgentCore Memory
+    context = get_memory_context(user_id, session_id)
     
-    # Build enriched prompt with DB context
-    enriched_prompt = build_contextual_prompt(
-        input_text, 
-        preferences, 
-        context, 
-        is_first_time
-    )
+    # Build enriched prompt with context
+    enriched_prompt = build_contextual_prompt(input_text, preferences, context)
     
-    # Process with full context
-    response = process_spiritual_guidance(enriched_prompt, preferences, user_id)
+    # Generate response
+    response = generate_spiritual_response(enriched_prompt)
     
-    # Save interaction to memory
-    memory.save_interaction(
-        user_id=user_id,
-        session_id=session_id,
-        user_input=input_text,
-        agent_response=response,
-        metadata={
-            "spiritual_themes": extract_themes(input_text, response),
-            "verses_shared": extract_verses(response),
-            "sentiment": analyze_sentiment(input_text)
-        }
-    )
-    
-    # Check if session should be summarized
-    if should_summarize_session(session_id):
-        summarize_and_save_session(user_id, session_id)
+    # Save interaction to AgentCore Memory
+    save_to_memory(user_id, session_id, input_text, response)
     
     return response
 
-def build_contextual_prompt(input_text: str, preferences: dict, context: dict, is_first_time: bool) -> str:
-    """
-    Build enriched prompt with database context instead of app-provided data.
-    """
-    
-    # Determine conversation type
-    conversation_type = "**first time today asking**" if is_first_time else "**continue conversation**"
-    
-    # Build context string with DB data
-    user_context = f"""
-    User Context (from database):
-    - firstName: {preferences.get('firstName', 'Friend')}
-    - bibleVersion: {preferences.get('bibleVersion', 'NIV')}
-    - denomination: {preferences.get('denomination', 'Christian')}
-    - birthday: {preferences.get('birthday', 'Not specified')}
-    - avatarName: {preferences.get('avatarName', 'Not specified')}
-    
-    Conversation Type: {conversation_type}
-    
-    User Message: {input_text}
-    """
-    
-    return user_context
+def get_memory_context(user_id: str, session_id: str) -> dict:
+    """Get conversation context from AgentCore Memory."""
+    try:
+        # Get recent events from this session
+        events = agentcore_client.list_events(
+            memoryId=MEMORY_ID,
+            actorId=user_id,
+            sessionId=session_id,
+            maxResults=10
+        )
+        
+        # Get long-term memories for this user
+        memories = agentcore_client.retrieve_memory_records(
+            memoryId=MEMORY_ID,
+            namespace=f"customer-support/{user_id}/preferences",
+            searchCriteria={
+                "topK": 5
+            }
+        )
+        
+        return {
+            "recent_events": events.get('events', []),
+            "long_term_memories": memories.get('memoryRecords', [])
+        }
+    except Exception as e:
+        print(f"Error getting memory context: {e}")
+        return {"recent_events": [], "long_term_memories": []}
+
+def save_to_memory(user_id: str, session_id: str, user_input: str, agent_response: str):
+    """Save interaction to AgentCore Memory."""
+    try:
+        # Save user message
+        agentcore_client.create_event(
+            memoryId=MEMORY_ID,
+            actorId=user_id,
+            sessionId=session_id,
+            eventTimestamp=int(time.time() * 1000),
+            payload=[
+                {
+                    "conversational": {
+                        "content": {"text": user_input},
+                        "role": "USER"
+                    }
+                }
+            ]
+        )
+        
+        # Save agent response
+        agentcore_client.create_event(
+            memoryId=MEMORY_ID,
+            actorId=user_id,
+            sessionId=session_id,
+            eventTimestamp=int(time.time() * 1000),
+            payload=[
+                {
+                    "conversational": {
+                        "content": {"text": agent_response},
+                        "role": "ASSISTANT"
+                    }
+                }
+            ]
+        )
+    except Exception as e:
+        print(f"Error saving to memory: {e}")
 
 @Tool(name="get_user_preferences")
 def get_user_preferences(user_id: str) -> dict:
