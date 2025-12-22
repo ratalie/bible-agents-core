@@ -1,15 +1,16 @@
-# Bible Agents for Bedrock Agent Core
+# Bible Agents for Bedrock AgentCore
 
-Two Claude Sonnet 4.5 agents for spiritual guidance.
+Two Claude Sonnet 4.5 agents for spiritual guidance using **AgentCore Runtime** with managed memory.
 
 ## Agents
 
 ### 1. Bible Companion
-Personalized conversational agent with memory. Uses user preferences (name, denomination, bible version) and saves conversation summaries.
+Personalized conversational agent with AgentCore Memory. Automatically loads user preferences from MySQL and maintains conversation context.
 
-- **Prompt**: `agents/bible-companion/prompt.txt`
-- **OpenAPI**: `agents/bible-companion/openapi.json`
-- **Lambda**: `agents/bible-companion/lambda/index.py`
+- **Runtime**: `agentcore_runtime.py`
+- **Handler**: `agentcore_runtime.bible_companion`
+- **Memory**: AgentCore Memory (managed)
+- **Database**: MySQL for user preferences
 
 ### 2. Verse of the Day
 Simple agent that returns daily Bible verses with reflections. No personalization.
@@ -18,51 +19,72 @@ Simple agent that returns daily Bible verses with reflections. No personalizatio
 - **OpenAPI**: `agents/verse-of-the-day/openapi.json`
 - **Lambda**: `agents/verse-of-the-day/lambda/index.py`
 
-## Infrastructure
+## Deployment
 
-SAM template in `infrastructure/template.yaml` creates:
-- DynamoDB tables for user preferences, conversation memory, and daily verses
-- Lambda functions for agent actions
-- Permissions for Bedrock to invoke Lambdas
+### AgentCore Runtime (Bible Companion)
+See complete guide: `AGENTCORE_DEPLOYMENT_GUIDE.md`
 
-## Deploy
+**Quick Setup**:
+1. Go to: https://us-east-1.console.aws.amazon.com/bedrock-agentcore/
+2. Create Runtime Agent with `agentcore_runtime.py`
+3. Connect to Memory: `memory_bqdqb-jtj3lc48bl`
+4. Configure MySQL environment variables
 
+### Traditional Bedrock Agent (Verse of the Day)
 ```bash
 cd infrastructure
 sam build
 sam deploy --guided
 ```
 
-## Setup in Bedrock Console
+## Data Architecture
 
-1. Create Agent with Claude Sonnet 4.5
-2. Copy prompt from `prompt.txt` to Instructions
-3. Create Action Group with OpenAPI schema
-4. Attach Lambda function
-5. Enable memory (for bible-companion)
+### AgentCore Memory (Bible Companion)
+- **Short-term**: Raw conversation events
+- **Long-term**: User preferences and session summaries
+- **Isolation**: By user_id
+- **Retention**: 90 days
 
-## DynamoDB Schema
+### MySQL Schema (User Data)
+```sql
+-- User basic info
+users: id (PK) | firstName | birthDate | avatarIa
 
-### User Preferences
-```
-userId (PK) | firstName | bibleVersion | denomination | birthday | avatarName
-```
+-- User preferences
+user_preferences: userId (FK) | bibleVersionId | denominationId
 
-### Conversation Memory
-```
-userId (PK) | timestamp (SK) | keyPoints | spiritualThemes | versesShared | userSentiment
-```
+-- Bible versions
+bible_versions: id (PK) | abbreviation | name
 
-### Daily Verses
-```
-date (PK) | references[] | theme
+-- Denominations  
+denominations: id (PK) | name
 ```
 
-## Memory Flow
+### DynamoDB Schema (Verse of the Day only)
+```
+Daily Verses: date (PK) | references[] | theme
+```
 
-1. User starts conversation
-2. Agent calls `checkFirstTimeToday` → determines greeting type
-3. Agent calls `getUserPreferences` → gets personalization
-4. Agent calls `getConversationMemory` → gets context from past sessions
-5. Conversation happens...
-6. When session ends (or `@@SUMMARIZE_SESSION@@`), agent calls `saveSessionSummary`
+## Integration
+
+### App → AgentCore Runtime
+```python
+response = client.invoke_agent_runtime(
+    agentRuntimeArn='arn:aws:bedrock-agentcore:us-east-1:124355682808:runtime/bible_companion-GrIcKjGWbo',
+    runtimeSessionId='session-123',
+    payload=json.dumps({
+        "prompt": "I'm struggling with anxiety",
+        "sessionAttributes": {
+            "userId": "user-abc-123"  # Required for personalization
+        }
+    })
+)
+```
+
+### Memory Flow
+1. User sends message with `userId`
+2. Agent loads preferences from MySQL
+3. Agent retrieves conversation context from AgentCore Memory
+4. Agent generates personalized response
+5. Agent saves interaction to AgentCore Memory
+6. Memory strategies extract long-term insights automatically
