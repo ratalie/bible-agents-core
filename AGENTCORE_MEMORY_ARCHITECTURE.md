@@ -474,7 +474,7 @@ aws logs tail /aws/lambda/gpbible-bedrock-processor-memory-test --follow
 
 ### Resultados de pruebas
 
-Ver: [logs/test_results_2025-12-29.txt](logs/test_results_2025-12-29.txt)
+Ver: [logs/test_results_2025-12-29.txt](https://github.com/ratalie/bible-agents-core/blob/main/logs/test_results_2025-12-29.txt)
 
 | Funcionalidad | Estado |
 |---------------|--------|
@@ -580,18 +580,27 @@ aws lambda update-function-code \
 
 ## Archivos del Proyecto
 
+| Archivo | Descripción | Link |
+|---------|-------------|------|
+| `AGENTCORE_MEMORY_ARCHITECTURE.md` | Esta documentación | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/AGENTCORE_MEMORY_ARCHITECTURE.md) |
+| `test_lambda_memory.py` | Script de prueba | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/test_lambda_memory.py) |
+| `logs/test_results_2025-12-29.txt` | Resultados de pruebas | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/logs/test_results_2025-12-29.txt) |
+| `lambda_bedrock_with_memory/index.js` | Código del Lambda con memoria | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/lambda_bedrock_with_memory/index.js) |
+| `lambda_bedrock_with_memory/package.json` | Dependencias | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/lambda_bedrock_with_memory/package.json) |
+| `lambda_bedrock_with_memory/deploy.ps1` | Script de despliegue | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/lambda_bedrock_with_memory/deploy.ps1) |
+| `agentcore-policy.json` | Política IAM para AgentCore | [Ver](https://github.com/ratalie/bible-agents-core/blob/main/agentcore-policy.json) |
+
 ```
 bible/
-├── AGENTCORE_MEMORY_ARCHITECTURE.md    # Esta documentación
-├── test_lambda_memory.py               # Script de prueba
+├── AGENTCORE_MEMORY_ARCHITECTURE.md
+├── test_lambda_memory.py
 ├── logs/
-│   └── test_results_2025-12-29.txt     # Resultados de pruebas
+│   └── test_results_2025-12-29.txt
 ├── lambda_bedrock_with_memory/
-│   ├── index.js                        # Código del Lambda con memoria
-│   ├── package.json                    # Dependencias
-│   ├── deploy.ps1                      # Script de despliegue
-│   └── lambda_memory.zip               # Paquete para deploy
-└── agentcore-policy.json               # Política IAM para AgentCore
+│   ├── index.js
+│   ├── package.json
+│   └── deploy.ps1
+└── agentcore-policy.json
 ```
 
 ---
