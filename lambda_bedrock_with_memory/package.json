@@ -1,0 +1,11 @@
+{
+  "name": "bedrock-processor-with-memory",
+  "version": "1.0.0",
+  "description": "Bedrock Agent processor with AgentCore Memory integration",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.700.0",
+    "@aws-sdk/client-bedrock-agentcore": "^3.700.0",
+    "axios": "^1.6.0"
+  }
+}

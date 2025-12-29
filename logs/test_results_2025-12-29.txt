@@ -1,0 +1,109 @@
+============================================================
+RESULTADOS DE PRUEBA - Lambda con AgentCore Memory
+Fecha: 29 de diciembre 2025
+============================================================
+
+CONFIGURACIÓN
+-------------
+Lambda Original: gpbible-bedrock-processor-dev (NO MODIFICADO)
+Lambda Clon:     gpbible-bedrock-processor-memory-test
+Memory ID:       memory_bqdqb-jtj3lc48bl
+Usuario prueba:  user-natalie-test
+Región:          us-east-1
+
+============================================================
+PRUEBA 1: Primera conversación (sin memoria previa)
+============================================================
+
+Input:
+  userId: user-natalie-test
+  text: "Hola, estoy pasando por un momento difícil y necesito guía espiritual"
+
+Logs:
+  2025-12-29T17:43:17 INFO  📚 Fetching user memory...
+  2025-12-29T17:43:18 INFO  No memory found or error: Actor user-natalie-test not found
+  2025-12-29T17:43:18 INFO  ℹ️ No previous memory for this user
+  2025-12-29T17:43:18 INFO  🤖 Invoking Bedrock Agent...
+  2025-12-29T17:43:22 INFO  Response received in 4577ms
+  2025-12-29T17:43:22 INFO  💾 Saving to AgentCore Memory...
+  2025-12-29T17:43:22 ERROR Error saving to memory: STRING_VALUE cannot be converted to Date
+
+Resultado: ❌ Error en timestamp (corregido después)
+
+============================================================
+PRUEBA 2: Primera conversación (después de fix)
+============================================================
+
+Input:
+  userId: user-natalie-test
+  text: "Hola, estoy pasando por un momento difícil y necesito guía espiritual"
+
+Logs:
+  2025-12-29T18:01:27 INFO  📚 Fetching user memory...
+  2025-12-29T18:01:27 INFO  ℹ️ No previous memory for this user
+  2025-12-29T18:01:27 INFO  🤖 Invoking Bedrock Agent...
+  2025-12-29T18:01:31 INFO  Response received in 4277ms
+  2025-12-29T18:01:31 INFO  💾 Saving to AgentCore Memory...
+  2025-12-29T18:01:32 INFO  ✅ Memory saved for user user-natalie-test
+
+Resultado: ✅ Memoria guardada exitosamente
+
+============================================================
+PRUEBA 3: Segunda conversación (con memoria)
+============================================================
+
+Input:
+  userId: user-natalie-test
+  text: "¿Qué versículo me recomiendas?"
+
+Logs:
+  2025-12-29T18:26:23 INFO  📚 Fetching user memory...
+  2025-12-29T18:26:23 INFO  ✅ Found previous conversations
+  2025-12-29T18:26:27 INFO  🤖 Invoking Bedrock Agent...
+  2025-12-29T18:26:27 INFO  Response received in 4019ms
+  2025-12-29T18:26:36 INFO  💾 Saving to AgentCore Memory...
+  2025-12-29T18:26:37 INFO  ✅ Memory saved for user user-natalie-test
+
+Resultado: ✅ Memoria leída y nueva interacción guardada
+
+============================================================
+VERIFICACIÓN DE MEMORIA EN AGENTCORE
+============================================================
+
+Actores: [{'actorId': 'user-natalie-test'}]
+
+Sesiones:
+  - session-test-conv-001 (creada: 2025-12-29T19:01:31)
+  - session-test-conv-002 (creada: 2025-12-29T19:13:36)
+
+Eventos en session-test-conv-001:
+  - USER: "Hola, estoy pasando por un momento difícil..."
+  - ASSISTANT: "Welcome! I noticed you're speaking Spanish..."
+
+============================================================
+RESUMEN
+============================================================
+
+| Funcionalidad                    | Estado |
+|----------------------------------|--------|
+| Leer memoria (usuario nuevo)     | ✅     |
+| Guardar mensaje usuario          | ✅     |
+| Guardar respuesta asistente      | ✅     |
+| Leer memoria (usuario existente) | ✅     |
+| Enriquecer prompt con contexto   | ✅     |
+| Invocar Bedrock Agent            | ✅     |
+
+NOTA: El error 400 del webhook es esperado porque es una prueba
+sin el backend real conectado.
+
+============================================================
+PRÓXIMOS PASOS
+============================================================
+
+1. Probar con más usuarios y conversaciones
+2. Validar que el contexto mejora las respuestas del agente
+3. Cuando esté listo, actualizar Lambda de producción:
+   
+   aws lambda update-function-code \
+     --function-name gpbible-bedrock-processor-dev \
+     --zip-file fileb://lambda_bedrock_with_memory/lambda_memory.zip
