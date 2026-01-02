@@ -1,0 +1,190 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AgentCore Memory API",
+    "version": "1.0.0",
+    "description": "API para gestionar memoria de conversaciones con AgentCore"
+  },
+  "paths": {
+    "/getConversationMemory": {
+      "get": {
+        "operationId": "getConversationMemory",
+        "summary": "Obtener memorias de conversación del usuario",
+        "description": "Recupera las conversaciones anteriores del usuario desde AgentCore Memory para mantener contexto",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID único del usuario"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 5 },
+            "description": "Número máximo de sesiones a recuperar"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memorias recuperadas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/saveConversationEvent": {
+      "post": {
+        "operationId": "saveConversationEvent",
+        "summary": "Guardar evento de conversación",
+        "description": "Guarda un mensaje de la conversación en AgentCore Memory para referencia futura",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Evento guardado exitosamente"
+          }
+        }
+      }
+    },
+    "/getUserMemorySummary": {
+      "get": {
+        "operationId": "getUserMemorySummary",
+        "summary": "Obtener resumen de memoria del usuario",
+        "description": "Obtiene un resumen de las memorias de largo plazo del usuario",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID único del usuario"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen obtenido exitosamente"
+          }
+        }
+      }
+    },
+    "/searchMemories": {
+      "get": {
+        "operationId": "searchMemories",
+        "summary": "Buscar en memorias del usuario",
+        "description": "Busca información relevante en las memorias del usuario usando búsqueda semántica",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID único del usuario"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Texto a buscar en las memorias"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 5 },
+            "description": "Número máximo de resultados"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Búsqueda completada"
+          }
+        }
+      }
+    },
+    "/deleteUserMemory": {
+      "delete": {
+        "operationId": "deleteUserMemory",
+        "summary": "Eliminar memoria del usuario",
+        "description": "Elimina toda la memoria de un usuario (para cumplimiento GDPR)",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID único del usuario"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memoria eliminada exitosamente"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MemoryResponse": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "memoryCount": { "type": "integer" },
+          "memories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sessionId": { "type": "string" },
+                "startTime": { "type": "string" },
+                "eventCount": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "SaveEventRequest": {
+        "type": "object",
+        "required": ["userId", "message"],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "ID único del usuario"
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "ID de la sesión actual"
+          },
+          "message": {
+            "type": "string",
+            "description": "Contenido del mensaje a guardar"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["USER", "ASSISTANT"],
+            "default": "USER",
+            "description": "Rol del mensaje (USER o ASSISTANT)"
+          }
+        }
+      }
+    }
+  }
+}
