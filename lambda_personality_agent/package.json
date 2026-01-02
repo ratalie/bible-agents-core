@@ -1,0 +1,15 @@
+{
+  "name": "bible-companion-personality-agent",
+  "version": "1.0.0",
+  "description": "Bible Companion with Personalities + AgentCore Memory",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js",
+    "zip": "powershell Compress-Archive -Path index.js,package.json,node_modules -DestinationPath lambda_personality.zip -Force"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.700.0",
+    "@aws-sdk/client-bedrock-agentcore": "^3.700.0",
+    "axios": "^1.6.0"
+  }
+}
