@@ -235,3 +235,58 @@ El backend debe enviar mensajes SNS con este formato:
 - `clone-bedrock-agent.ps1` - Script para clonar el agente de Bedrock
 - `deploy.ps1` - Script de deployment del Lambda
 - `package.json` - Dependencias Node.js
+
+
+## Testing
+
+### Test all 4 companions
+```bash
+python test_personalities.py
+```
+
+This sends test messages via SNS for each companion (Caleb, Ruth, Solomon, Miriam) with different age/spiritual profiles.
+
+### Test single companion directly
+```python
+import boto3
+import json
+
+sns = boto3.client('sns', region_name='us-east-1')
+
+message = {
+    "conversationId": "test-123",
+    "messageId": "msg-123",
+    "userId": "user-123",
+    "text": "I'm going through a difficult time at work",
+    "userProfile": {
+        "isPremium": False,
+        "selectedCompanion": "caleb",  # or "ruth", "solomon", "miriam"
+        "age": 28,
+        "spiritualData": {
+            "spiritual_stage_name": "Growing",
+            "spiritual_score_percent": 55,
+            "spiritual_tier": 5
+        }
+    }
+}
+
+sns.publish(
+    TopicArn="arn:aws:sns:us-east-1:124355682808:bible-companion-personality-topic",
+    Message=json.dumps(message)
+)
+```
+
+### Check logs
+```bash
+aws logs tail "/aws/lambda/bible-companion-personality" --since 5m --region us-east-1
+```
+
+## Current Deployment
+
+| Resource | Value |
+|----------|-------|
+| Lambda | `bible-companion-personality` |
+| SNS Topic | `bible-companion-personality-topic` |
+| Bedrock Agent ID | `OPFJ6RWI2P` (uses existing agent) |
+| Bedrock Agent Alias | `YWLZEUSKI8` |
+| AgentCore Memory ID | `memory_bqdqb-jtj3lc48bl` |
