@@ -1,0 +1,20 @@
+{
+  "name": "bible-agents-core-tests",
+  "version": "1.0.0",
+  "description": "Scripts de prueba para Bible Agents con AgentCore Memory",
+  "main": "test_lambda_memory.js",
+  "scripts": {
+    "test:lambda": "node test_lambda_memory.js",
+    "test:chat": "node chat_bible.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.700.0",
+    "@aws-sdk/client-bedrock-agentcore": "^3.700.0",
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.700.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.700.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
