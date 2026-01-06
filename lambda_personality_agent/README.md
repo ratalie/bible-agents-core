@@ -1,6 +1,17 @@
 # Bible Companion - Personality Agent
 
-Sistema de personalidades dinámicas para el Bible Companion AI.
+Sistema de personalidades dinámicas para el Bible Companion AI con memoria persistente y búsqueda semántica.
+
+## Features
+
+- ✅ **4 Companions predefinidos** (Caleb, Ruth, Solomon, Miriam)
+- ✅ **Personalidades customizables** (usuarios premium)
+- ✅ **Life Stage** basado en edad del usuario
+- ✅ **Spiritual Depth** basado en survey
+- ✅ **AgentCore Memory** con 3 estrategias:
+  - **Summarization** - Resúmenes automáticos de conversaciones
+  - **User Preferences** - Extracción de preferencias del usuario
+  - **Semantic Search** - Búsqueda inteligente de conversaciones relevantes
 
 ## Cómo Funciona
 
@@ -54,19 +65,77 @@ Respuesta con voz/estilo de Caleb
 │  │ 1. Recibe mensaje con userProfile                        │   │
 │  │ 2. Construye personalidad (companion + life stage +      │   │
 │  │    spiritual depth)                                      │   │
-│  │ 3. Lee memoria del usuario (AgentCore)                   │   │
-│  │ 4. Enriquece prompt con personalidad + contexto          │   │
-│  │ 5. Llama a Bedrock Agent                                 │   │
-│  │ 6. Guarda interacción en memoria                         │   │
-│  │ 7. Envía respuesta al backend                            │   │
+│  │ 3. Lee memoria reciente (AgentCore - últimas sesiones)   │   │
+│  │ 4. Busca memorias relevantes (Semantic Search)           │   │
+│  │ 5. Enriquece prompt con personalidad + contexto          │   │
+│  │ 6. Llama a Bedrock Agent                                 │   │
+│  │ 7. Guarda interacción en memoria                         │   │
+│  │ 8. Envía respuesta al backend                            │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│           Bedrock Agent: bible-companion-personality             │
-│  (Instrucciones con sistema de personalidad integrado)          │
-└─────────────────────────────────────────────────────────────────┘
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+┌──────────────────────────┐    ┌──────────────────────────────────┐
+│     Bedrock Agent        │    │      AgentCore Memory            │
+│  bible-companion-pers    │    │  memory_bqdqb-jtj3lc48bl         │
+│                          │    │                                  │
+│  Claude Haiku 4.5        │    │  Strategies:                     │
+│                          │    │  • summary_grace_v1 (resúmenes)  │
+│                          │    │  • preference_grace_v1 (prefs)   │
+│                          │    │  • semantic_grace_v1 (búsqueda)  │
+└──────────────────────────┘    └──────────────────────────────────┘
+```
+
+## AgentCore Memory
+
+### Estrategias Configuradas
+
+| Estrategia | ID | Función |
+|------------|-----|---------|
+| **Summarization** | `summary_grace_v1-GQT3I7Ct8f` | Genera resúmenes XML de cada conversación |
+| **User Preferences** | `preference_grace_v1-ePMoWwE9Yh` | Extrae preferencias del usuario (idioma, temas, etc.) |
+| **Semantic Search** | `semantic_grace_v1-I25PeS4v8Y` | Crea embeddings para búsqueda inteligente |
+
+### Flujo de Memoria
+
+```
+Usuario: "Necesito paz en mi vida"
+    │
+    ├─► Memoria reciente (últimas 3 sesiones, 10 eventos c/u)
+    │   └─► "Ayer hablamos de trabajo..."
+    │
+    └─► Búsqueda semántica
+        └─► Encuentra conversación de hace 2 semanas sobre "versículos de paz"
+    │
+    ▼
+Prompt enriquecido con AMBOS contextos → Respuesta más relevante
+```
+
+### Permisos IAM Requeridos
+
+El rol del Lambda necesita estos permisos para AgentCore:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "bedrock-agentcore:CreateEvent",
+                "bedrock-agentcore:ListEvents",
+                "bedrock-agentcore:ListSessions",
+                "bedrock-agentcore:GetEvent",
+                "bedrock-agentcore:DeleteEvent",
+                "bedrock-agentcore:ListActors",
+                "bedrock-agentcore:RetrieveMemoryRecords",
+                "bedrock-agentcore:ListMemoryRecords"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
 ```
 
 ## Companions Predefinidos (FREE Users)
@@ -224,9 +293,17 @@ El backend debe enviar mensajes SNS con este formato:
     "spiritualTier": 6
   },
   "hasMemoryContext": true,
+  "hasSemanticContext": true,
   "processingTimeMs": 2500
 }
 ```
+
+### Campos de Respuesta
+
+| Campo | Descripción |
+|-------|-------------|
+| `hasMemoryContext` | Si se encontró memoria reciente del usuario |
+| `hasSemanticContext` | Si se encontraron conversaciones relevantes via búsqueda semántica |
 
 ## Archivos
 
@@ -287,6 +364,20 @@ aws logs tail "/aws/lambda/bible-companion-personality" --since 5m --region us-e
 |----------|-------|
 | Lambda | `bible-companion-personality` |
 | SNS Topic | `bible-companion-personality-topic` |
-| Bedrock Agent ID | `OPFJ6RWI2P` (uses existing agent) |
+| Bedrock Agent ID | `OPFJ6RWI2P` |
 | Bedrock Agent Alias | `YWLZEUSKI8` |
 | AgentCore Memory ID | `memory_bqdqb-jtj3lc48bl` |
+| Semantic Strategy ID | `semantic_grace_v1-I25PeS4v8Y` |
+| Summary Strategy ID | `summary_grace_v1-GQT3I7Ct8f` |
+| Preference Strategy ID | `preference_grace_v1-ePMoWwE9Yh` |
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENTCORE_MEMORY_ID` | ID de la memoria AgentCore | `memory_bqdqb-jtj3lc48bl` |
+| `BEDROCK_AGENT_ID` | ID del agente Bedrock | Required |
+| `BEDROCK_AGENT_ALIAS_ID` | Alias del agente | Required |
+| `SEMANTIC_STRATEGY_ID` | ID de la estrategia semántica | `semantic_grace_v1-I25PeS4v8Y` |
+| `BACKEND_WEBHOOK_URL` | URL del webhook del backend | Required |
+| `WEBHOOK_SECRET` | Secret para autenticar webhook | Optional |
