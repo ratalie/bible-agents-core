@@ -10,7 +10,7 @@
  */
 
 const { BedrockAgentRuntimeClient, InvokeAgentCommand } = require("@aws-sdk/client-bedrock-agent-runtime");
-const { BedrockAgentCoreClient, ListEventsCommand, CreateEventCommand, ListSessionsCommand } = require("@aws-sdk/client-bedrock-agentcore");
+const { BedrockAgentCoreClient, ListEventsCommand, CreateEventCommand, ListSessionsCommand, RetrieveMemoryRecordsCommand } = require("@aws-sdk/client-bedrock-agentcore");
 const axios = require("axios");
 
 // Clientes AWS
@@ -26,6 +26,7 @@ const agentcoreClient = new BedrockAgentCoreClient({
 const MEMORY_ID = process.env.AGENTCORE_MEMORY_ID || 'memory_bqdqb-jtj3lc48bl';
 const AGENT_ID = process.env.BEDROCK_AGENT_ID;
 const ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID;
+const SEMANTIC_STRATEGY_ID = process.env.SEMANTIC_STRATEGY_ID || 'semantic_grace_v1-I25PeS4v8Y';
 
 // ============================================================================
 // SISTEMA DE PERSONALIDADES
@@ -270,6 +271,49 @@ function getDefaultVoiceGuidelines(config) {
 // ============================================================================
 
 /**
+ * Buscar memorias relevantes usando búsqueda semántica
+ * Encuentra conversaciones pasadas relacionadas con el mensaje actual
+ */
+async function getSemanticMemory(userId, userMessage, limit = 5) {
+    try {
+        const command = new RetrieveMemoryRecordsCommand({
+            memoryId: MEMORY_ID,
+            namespace: `/strategies/${SEMANTIC_STRATEGY_ID}/actors/${userId}`,
+            searchCriteria: {
+                searchQuery: userMessage,
+                topK: limit
+            }
+        });
+        
+        const response = await agentcoreClient.send(command);
+        const records = response.memoryRecordSummaries || [];
+        
+        if (records.length === 0) {
+            return { hasSemanticMemory: false, context: "" };
+        }
+        
+        // Formatear memorias relevantes
+        const relevantMemories = records
+            .filter(r => r.content?.text)
+            .map(r => r.content.text.substring(0, 300))
+            .slice(0, 3);
+        
+        if (relevantMemories.length === 0) {
+            return { hasSemanticMemory: false, context: "" };
+        }
+        
+        return {
+            hasSemanticMemory: true,
+            context: `\n\n[Relevant past conversations]\n${relevantMemories.join('\n---\n')}\n[End of relevant context]\n\n`
+        };
+        
+    } catch (error) {
+        console.log('Semantic search error (may be empty):', error.message);
+        return { hasSemanticMemory: false, context: "" };
+    }
+}
+
+/**
  * Obtener memoria reciente del usuario desde AgentCore
  */
 async function getUserMemory(userId, limit = 5) {
@@ -503,16 +547,23 @@ exports.handler = async (event) => {
             const personality = buildPersonalityPrompt(userProfile);
             console.log(`Companion: ${personality.companionName}, Life Stage: ${personality.lifeStage}, Spiritual: ${personality.spiritualStage}`);
             
-            // 3. Obtener memoria del usuario
+            // 3. Obtener memoria del usuario (reciente + semántica)
             console.log('📚 Fetching user memory...');
-            const memory = await getUserMemory(userId);
+            const [recentMemory, semanticMemory] = await Promise.all([
+                getUserMemory(userId),
+                getSemanticMemory(userId, text)
+            ]);
+            
+            if (semanticMemory.hasSemanticMemory) {
+                console.log('🔍 Found semantically relevant past conversations');
+            }
             
             // 4. Construir prompt enriquecido
             const enrichedText = `
 ${personality.systemPrompt}
 
-${memory.hasMemory ? memory.context : '[First conversation with this user]'}
-
+${recentMemory.hasMemory ? recentMemory.context : '[First conversation with this user]'}
+${semanticMemory.hasSemanticMemory ? semanticMemory.context : ''}
 User says: ${text}
 `;
             
@@ -556,7 +607,8 @@ User says: ${text}
                     spiritualStage: personality.spiritualStage,
                     spiritualTier: personality.spiritualTier
                 },
-                hasMemoryContext: memory.hasMemory,
+                hasMemoryContext: recentMemory.hasMemory,
+                hasSemanticContext: semanticMemory.hasSemanticMemory,
                 tokensUsed: {
                     input: Math.floor(enrichedText.length / 4),
                     output: Math.floor(responseText.length / 4),
@@ -598,3 +650,4 @@ module.exports.PERSONALITY_OPTIONS = PERSONALITY_OPTIONS;
 module.exports.SPIRITUAL_STAGES = SPIRITUAL_STAGES;
 module.exports.getLifeStage = getLifeStage;
 module.exports.buildPersonalityPrompt = buildPersonalityPrompt;
+module.exports.getSemanticMemory = getSemanticMemory;

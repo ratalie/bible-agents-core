@@ -1,0 +1,13 @@
+{
+  "addMemoryStrategies": [
+    {
+      "semanticMemoryStrategy": {
+        "name": "semantic_grace_v1",
+        "description": "Semantic search for Bible companion conversations - extracts key spiritual topics, Bible verses, prayer requests, and themes for intelligent retrieval",
+        "namespaces": [
+          "/strategies/{memoryStrategyId}/actors/{actorId}"
+        ]
+      }
+    }
+  ]
+}

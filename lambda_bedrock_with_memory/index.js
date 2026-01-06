@@ -10,7 +10,7 @@
  */
 
 const { BedrockAgentRuntimeClient, InvokeAgentCommand } = require("@aws-sdk/client-bedrock-agent-runtime");
-const { BedrockAgentCoreClient, ListEventsCommand, CreateEventCommand, ListSessionsCommand } = require("@aws-sdk/client-bedrock-agentcore");
+const { BedrockAgentCoreClient, ListEventsCommand, CreateEventCommand, ListSessionsCommand, RetrieveMemoryRecordsCommand } = require("@aws-sdk/client-bedrock-agentcore");
 const axios = require("axios");
 
 // Clientes AWS
@@ -26,6 +26,48 @@ const agentcoreClient = new BedrockAgentCoreClient({
 const MEMORY_ID = process.env.AGENTCORE_MEMORY_ID || 'memory_bqdqb-jtj3lc48bl';
 const AGENT_ID = process.env.BEDROCK_AGENT_ID;
 const ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID;
+const SEMANTIC_STRATEGY_ID = process.env.SEMANTIC_STRATEGY_ID || 'semantic_grace_v1-I25PeS4v8Y';
+
+/**
+ * Buscar memorias relevantes usando búsqueda semántica
+ */
+async function getSemanticMemory(userId, userMessage, limit = 5) {
+    try {
+        const command = new RetrieveMemoryRecordsCommand({
+            memoryId: MEMORY_ID,
+            namespace: `/strategies/${SEMANTIC_STRATEGY_ID}/actors/${userId}`,
+            searchCriteria: {
+                searchQuery: userMessage,
+                topK: limit
+            }
+        });
+        
+        const response = await agentcoreClient.send(command);
+        const records = response.memoryRecordSummaries || [];
+        
+        if (records.length === 0) {
+            return { hasSemanticMemory: false, context: "" };
+        }
+        
+        const relevantMemories = records
+            .filter(r => r.content?.text)
+            .map(r => r.content.text.substring(0, 300))
+            .slice(0, 3);
+        
+        if (relevantMemories.length === 0) {
+            return { hasSemanticMemory: false, context: "" };
+        }
+        
+        return {
+            hasSemanticMemory: true,
+            context: `\n\n[Conversaciones relevantes anteriores]\n${relevantMemories.join('\n---\n')}\n[Fin de contexto relevante]\n\n`
+        };
+        
+    } catch (error) {
+        console.log('Semantic search error:', error.message);
+        return { hasSemanticMemory: false, context: "" };
+    }
+}
 
 /**
  * Obtener memoria reciente del usuario desde AgentCore
@@ -193,20 +235,28 @@ exports.handler = async (event) => {
                 throw new Error('Bedrock Agent configuration missing');
             }
             
-            // 1. Obtener memoria del usuario
+            // 1. Obtener memoria del usuario (reciente + semántica)
             console.log('📚 Fetching user memory...');
-            const memory = await getUserMemory(userId);
+            const [recentMemory, semanticMemory] = await Promise.all([
+                getUserMemory(userId),
+                getSemanticMemory(userId, text)
+            ]);
             
-            if (memory.hasMemory) {
+            if (recentMemory.hasMemory) {
                 console.log('✅ Found previous conversations');
             } else {
                 console.log('ℹ️ No previous memory for this user');
             }
             
+            if (semanticMemory.hasSemanticMemory) {
+                console.log('🔍 Found semantically relevant conversations');
+            }
+            
             // 2. Construir prompt con contexto de memoria
-            const enrichedText = memory.hasMemory 
-                ? `${memory.context}Usuario dice: ${text}`
-                : text;
+            let enrichedText = text;
+            if (recentMemory.hasMemory || semanticMemory.hasSemanticMemory) {
+                enrichedText = `${recentMemory.context}${semanticMemory.context}Usuario dice: ${text}`;
+            }
             
             // 3. Llamar a Bedrock Agent
             console.log('🤖 Invoking Bedrock Agent...');
@@ -241,7 +291,8 @@ exports.handler = async (event) => {
                 responseText,
                 timestamp: new Date().toISOString(),
                 processingTimeMs: processingTime,
-                hasMemoryContext: memory.hasMemory,
+                hasMemoryContext: recentMemory.hasMemory,
+                hasSemanticContext: semanticMemory.hasSemanticMemory,
                 tokensUsed: {
                     input: Math.floor(enrichedText.length / 4),
                     output: Math.floor(responseText.length / 4),
