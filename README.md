@@ -2,30 +2,123 @@
 
 Agentes de IA para guía espiritual usando **Bedrock Agents** con **AgentCore Memory**.
 
+## Inventario de Agentes - Cuenta AWS: 124355682808
+
+### Agentes de Producción
+
+| Agente | Agent ID | Status | Última Actualización |
+|--------|----------|--------|---------------------|
+| **bible-companion-personality** | `SADSVG3N5Q` | ✅ PREPARED | 2026-01-02 |
+| **Bible_App_GraceAI_Chat_Person_v2** (Grace v2) | `NFL5LXYSUW` | ✅ PREPARED | 2026-01-02 |
+| **Bible_App_GraceAI_Chat_Claude_Person** (Grace v1) | `OPFJ6RWI2P` | ✅ PREPARED | 2025-09-30 |
+| **Bible_App_GraceAI_Chat_Person_Mem_Pers** | `MCP33AOQV8` | ✅ PREPARED | 2025-12-05 |
+| **BrotherBen** | `PLGO7CNWUR` | ✅ PREPARED | 2026-01-02 |
+| **Bible_App_DailyVerse_Reflection** | `LDJOFRZS0H` | ✅ PREPARED | 2025-11-17 |
+| **Bible_App_DailyReflection** | `O4ECQHVBCG` | ✅ PREPARED | 2025-07-21 |
+| **Bible_App_DailyVerse** | `AGUM300IVR` | ✅ PREPARED | 2025-07-11 |
+| **Bible_App_GraceAI_Path** | `Y3QJS0ZVS7` | ✅ PREPARED | 2025-07-11 |
+
+---
+
+## Agentes Principales - Detalle de Versiones
+
+### 1. Bible Companion Personality Agent
+**Agent ID**: `SADSVG3N5Q` | **Modelo**: Claude Haiku 4.5
+
+Sistema completo con personalidades dinámicas y memoria semántica.
+
+#### Versiones
+| Versión | Alias | Alias ID | Fecha Creación | Estado |
+|---------|-------|----------|----------------|--------|
+| **v1** | `production` | `FS3FHAOFWO` | 2026-01-02 | ✅ PREPARED |
+| DRAFT | `AgentTestAlias` | `TSTALIASID` | 2026-01-02 | 🧪 TEST |
+
+#### Features
+- ✅ 4 Companions predefinidos (Caleb, Ruth, Solomon, Miriam)
+- ✅ Personalidades customizables (premium)
+- ✅ Life Stage basado en edad
+- ✅ Spiritual Depth basado en survey
+- ✅ AgentCore Memory con búsqueda semántica
+
+#### Lambda Asociado
+- **Función**: `bible-companion-personality`
+- **Runtime**: Node.js 20.x
+- **Última actualización**: 2026-01-05
+
+---
+
+### 2. Grace AI Chat v2 (Activo en producción)
+**Agent ID**: `NFL5LXYSUW` | **Modelo**: Claude Haiku 4.5
+
+Agente principal de chat con personalización v2.
+
+#### Versiones
+| Versión | Alias | Alias ID | Fecha Creación | Estado | Notas |
+|---------|-------|----------|----------------|--------|-------|
+| **v5** 🔥 | `Bible_App_GraceAI_Chat_Person_v2_v4` | `CKLXTRRBZA` | 2026-01-02 | ✅ ACTIVO | Versión actual producción |
+| v4 | `Bible_App_GraceAI_Chat_Person_v2_v4` | `CKLXTRRBZA` | 2025-12-15 | ⚠️ REEMPLAZADA | |
+| v3 | `Bible_App_GraceAI_Chat_Person_v2_v3` | `PGCL3UGSQ4` | 2025-12-15 | 📦 ARCHIVADA | |
+| v2 | `Bible_App_GraceAI_Chat_Person_v2_v2` | `MDOO3WGM66` | 2025-11-25 | 📦 ARCHIVADA | |
+| v1 | `Bible_App_GraceAI_Chat_Person_v2_v1` | `DTOKM7QHUW` | 2025-11-06 | 📦 ARCHIVADA | |
+| DRAFT | `AgentTestAlias` | `TSTALIASID` | 2025-11-05 | 🧪 TEST | |
+
+#### Lambda Asociado
+- **Función**: `gpbible-bedrock-processor-dev`
+- **Runtime**: Node.js 18.x
+- **Última actualización**: 2026-01-07
+
+---
+
+### 3. Grace AI Chat v1 (Legacy)
+**Agent ID**: `OPFJ6RWI2P` | **Modelo**: Claude Haiku 4.5
+
+Primera versión del chat personalizado (legacy, en transición).
+
+#### Versiones
+| Versión | Alias | Alias ID | Fecha Creación | Estado |
+|---------|-------|----------|----------------|--------|
+| v3 | `Bible_App_GraceAI_Chat_Claude_Personv3` | `2NUF6QJQQB` | 2025-09-30 | ⚠️ LEGACY |
+| v2 | `Bible_App_GraceAI_Chat_Claude_Personv2` | `GUQFFT9MNM` | 2025-09-23 | 📦 ARCHIVADA |
+| v1 | `Bible_App_GraceAI_Chat_Claude_Personv1` | `YWLZEUSKI8` | 2025-07-11 | 📦 ARCHIVADA |
+| DRAFT | `AgentTestAlias` | `TSTALIASID` | 2025-07-11 | 🧪 TEST |
+
+---
+
 ## Lambdas Disponibles
 
-### 1. Bible Companion Personality (`lambda_personality_agent/`)
-Lambda completo con personalidades dinámicas y memoria semántica.
-
-- **Lambda**: `bible-companion-personality`
+### Lambda con Personalidades
+**Función**: `bible-companion-personality`
+- **Runtime**: Node.js 20.x
+- **Última actualización**: 2026-01-05 23:39:54
+- **Directorio**: `lambda_personality_agent/`
 - **Features**:
-  - ✅ 4 Companions predefinidos (Caleb, Ruth, Solomon, Miriam)
-  - ✅ Personalidades customizables (premium)
-  - ✅ Life Stage basado en edad
-  - ✅ Spiritual Depth basado en survey
   - ✅ AgentCore Memory con búsqueda semántica
+  - ✅ Sistema de personalidades dinámicas
+  - ✅ 4 companions predefinidos
 
-### 2. Bible Companion Memory (`lambda_bedrock_with_memory/`)
-Lambda con memoria pero sin personalidades.
-
-- **Lambda**: `gpbible-bedrock-processor-memory-test`
+### Lambda con Memoria (Sin Personalidades)
+**Función**: `gpbible-bedrock-processor-memory-test`
+- **Runtime**: Node.js 18.x
+- **Última actualización**: 2026-01-05 23:42:20
+- **Directorio**: `lambda_bedrock_with_memory/`
 - **Features**:
   - ✅ AgentCore Memory
   - ✅ Búsqueda semántica
   - ❌ Sin personalidades
 
-### 3. Verse of the Day (`agents/verse-of-the-day/`)
-Agente simple para versículos diarios.
+### Lambda Principal (Dev/Prod)
+**Función**: `gpbible-bedrock-processor-dev`
+- **Runtime**: Node.js 18.x
+- **Última actualización**: 2026-01-07 15:53:23
+- **Features**: Procesador principal para Grace AI v2
+
+### Otras Lambdas
+| Función | Runtime | Propósito |
+|---------|---------|-----------|
+| `bible-agentcore-memory` | Python 3.11 | Pruebas AgentCore |
+| `gpbible-send-emails` | Node.js 20.x | Envío de emails |
+| `gpbible-process-emails` | Node.js 22.x | Procesamiento emails |
+| `gpbible-send-pushNotifications` | Node.js 20.x | Push notifications |
 
 ## AgentCore Memory
 
