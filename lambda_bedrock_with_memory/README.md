@@ -24,31 +24,36 @@ Este Lambda de AWS integra **Bedrock Agent** con **AgentCore Memory** para propo
 ### Componentes Clave
 
 #### **Evento (Event)**
+
 Un evento representa un mensaje individual guardado en AgentCore Memory. Cada interacción genera dos eventos:
+
 - **Evento USER**: Mensaje enviado por el usuario
 - **Evento ASSISTANT**: Respuesta generada por el asistente
 
 **Ejemplo**: Una conversación con 3 intercambios genera 6 eventos (3 del usuario + 3 del asistente).
 
 #### **Sesión (Session)**
+
 Una sesión agrupa todos los eventos de una conversación específica. Se identifica por `sessionId = "session-{conversationId}"`. Cada conversación tiene su propia sesión aislada.
 
 #### **Actor (Actor)**
+
 Representa al usuario en AgentCore Memory. Se identifica por `actorId = userId`. Todos los eventos de un usuario están asociados a su `actorId`.
 
 #### **Memory ID**
+
 Identificador único de la instancia de memoria en AgentCore. Configurado mediante la variable de entorno `AGENTCORE_MEMORY_ID`.
 
 ### Variables de Entorno
 
-| Variable | Descripción | Requerido | Default |
-|----------|-------------|-----------|---------|
-| `AGENTCORE_MEMORY_ID` | ID de la memoria en AgentCore | ✅ | `memory_bqdqb-jtj3lc48bl` |
-| `BEDROCK_AGENT_ID` | ID del Bedrock Agent | ✅ | - |
-| `BEDROCK_AGENT_ALIAS_ID` | Alias del Bedrock Agent | ✅ | - |
-| `AWS_REGION` | Región de AWS | ❌ | `us-east-1` |
-| `BACKEND_WEBHOOK_URL` | URL del webhook para enviar respuestas | ✅ | - |
-| `WEBHOOK_SECRET` | Secret para autenticación del webhook | ❌ | - |
+| Variable                 | Descripción                            | Requerido | Default                   |
+| ------------------------ | -------------------------------------- | --------- | ------------------------- |
+| `AGENTCORE_MEMORY_ID`    | ID de la memoria en AgentCore          | ✅        | `memory_bqdqb-jtj3lc48bl` |
+| `BEDROCK_AGENT_ID`       | ID del Bedrock Agent                   | ✅        | -                         |
+| `BEDROCK_AGENT_ALIAS_ID` | Alias del Bedrock Agent                | ✅        | -                         |
+| `AWS_REGION`             | Región de AWS                          | ❌        | `us-east-1`               |
+| `BACKEND_WEBHOOK_URL`    | URL del webhook para enviar respuestas | ✅        | -                         |
+| `WEBHOOK_SECRET`         | Secret para autenticación del webhook  | ❌        | -                         |
 
 ### Límites y Configuración
 
@@ -165,6 +170,7 @@ Usuario dice: ¿Y cuál es el más corto?
 ### Estructura de Datos
 
 #### Mensaje SNS (Entrada)
+
 ```json
 {
   "Records": [
@@ -178,11 +184,13 @@ Usuario dice: ¿Y cuál es el más corto?
 ```
 
 #### Respuesta al Backend (Salida)
+
 ```json
 {
   "eventType": "bedrock_response",
   "conversationId": "conv-123",
   "messageId": "ai-msg-456",
+<<<<<<< HEAD
   "responseText": "¡Hola! ¿En qué puedo ayudarte?",
   "timestamp": "2025-01-15T10:30:00.000Z",
   "processingTimeMs": 1250,
@@ -190,11 +198,20 @@ Usuario dice: ¿Y cuál es el más corto?
   "tokensUsed": {
     "input": 150,
     "output": 25
+=======
+  "responseText": "Respuesta del agente...",
+  "hasMemoryContext": true,
+  "hasSemanticContext": true,
+  "processingTimeMs": 2500,
+  "tokensUsed": {
+    "input": 500,
+    "output": 200
+>>>>>>> e07059073ee9a86079964fee604686b5a2bd2418
   }
 }
 ```
 
----
+## <<<<<<< HEAD
 
 ## Ejemplo de Consumo en JavaScript
 
@@ -259,26 +276,32 @@ app.use(express.json());
 // Endpoint para recibir respuestas del Lambda
 app.post("/webhook/bedrock-response", (req, res) => {
   const secret = req.headers["x-webhook-secret"];
-  
+
   // Validar secret (opcional)
   if (process.env.WEBHOOK_SECRET && secret !== process.env.WEBHOOK_SECRET) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const { eventType, conversationId, messageId, responseText, hasMemoryContext } = req.body;
+  const {
+    eventType,
+    conversationId,
+    messageId,
+    responseText,
+    hasMemoryContext,
+  } = req.body;
 
   if (eventType === "bedrock_response") {
     console.log(`✅ Respuesta recibida para conversación ${conversationId}`);
     console.log(`   Mensaje ID: ${messageId}`);
     console.log(`   Tiene contexto: ${hasMemoryContext}`);
     console.log(`   Respuesta: ${responseText}`);
-    
+
     // Aquí puedes procesar la respuesta:
     // - Guardarla en tu base de datos
     // - Enviarla al cliente via WebSocket
     // - Actualizar la UI
     // etc.
-    
+
     res.json({ success: true });
   } else if (eventType === "processing_error") {
     console.error(`❌ Error procesando mensaje ${messageId}:`, req.body.error);
@@ -310,7 +333,7 @@ class BibleChatClient {
 
   async sendMessage(text) {
     const messageId = `msg-${Date.now()}`;
-    
+
     // Publicar mensaje a SNS
     const command = new PublishCommand({
       TopicArn: this.topicArn,
@@ -324,7 +347,7 @@ class BibleChatClient {
 
     await this.snsClient.send(command);
     console.log(`📤 Mensaje enviado: ${text}`);
-    
+
     return messageId;
   }
 
@@ -357,7 +380,7 @@ await client.sendMessage("¿Qué es la Biblia?");
 function waitForResponse(conversationId, messageId, timeout = 30000) {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
-    
+
     // En un caso real, esto se conectaría a tu sistema de eventos
     // (WebSocket, polling, etc.)
     const checkInterval = setInterval(() => {
@@ -384,11 +407,10 @@ async function chatFlow() {
     const msg1 = await client.sendMessage("Hola");
     console.log("Esperando respuesta...");
     // En producción, esperarías la respuesta del webhook
-    
+
     // Segundo mensaje (con contexto de memoria)
     const msg2 = await client.sendMessage("¿Qué me dijiste antes?");
     // El Lambda recuperará el contexto de la conversación anterior
-    
   } catch (error) {
     console.error("Error en el flujo de chat:", error);
   }
@@ -402,7 +424,7 @@ async function chatFlow() {
 app.post("/webhook/bedrock-response", async (req, res) => {
   try {
     const data = req.body;
-    
+
     if (data.eventType === "processing_error") {
       // Manejar error del Lambda
       console.error("Error del Lambda:", {
@@ -411,17 +433,19 @@ app.post("/webhook/bedrock-response", async (req, res) => {
         error: data.error,
         source: data.source,
       });
-      
+
       // Notificar al usuario
-      await notifyUser(data.conversationId, "Lo siento, hubo un error procesando tu mensaje.");
-      
+      await notifyUser(
+        data.conversationId,
+        "Lo siento, hubo un error procesando tu mensaje."
+      );
+
       return res.json({ success: true });
     }
-    
+
     // Procesar respuesta exitosa
     await processResponse(data);
     res.json({ success: true });
-    
   } catch (error) {
     console.error("Error en webhook:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -460,4 +484,88 @@ aws lambda update-function-code \
 - **Aislamiento de memoria**: Cada `conversationId` tiene su propia sesión aislada. No se comparte contexto entre conversaciones diferentes.
 - **Orden de eventos**: Los eventos se ordenan por timestamp. El asistente usa +1 segundo para asegurar orden correcto.
 - **Truncamiento**: Los mensajes se truncarán a 200 caracteres en el contexto para optimizar tokens, pero se guardan completos en AgentCore.
-- **Streaming**: El Lambda procesa el stream completo de Bedrock antes de guardar y responder.
+- # **Streaming**: El Lambda procesa el stream completo de Bedrock antes de guardar y responder.
+
+## Current Deployment
+
+| Resource             | Value                                   |
+| -------------------- | --------------------------------------- |
+| Lambda               | `gpbible-bedrock-processor-memory-test` |
+| Bedrock Agent ID     | `OPFJ6RWI2P`                            |
+| Bedrock Agent Alias  | `YWLZEUSKI8`                            |
+| AgentCore Memory ID  | `memory_bqdqb-jtj3lc48bl`               |
+| Semantic Strategy ID | `semantic_grace_v1-I25PeS4v8Y`          |
+
+## Environment Variables
+
+| Variable                 | Description                    | Default                        |
+| ------------------------ | ------------------------------ | ------------------------------ |
+| `AGENTCORE_MEMORY_ID`    | ID de la memoria AgentCore     | `memory_bqdqb-jtj3lc48bl`      |
+| `BEDROCK_AGENT_ID`       | ID del agente Bedrock          | Required                       |
+| `BEDROCK_AGENT_ALIAS_ID` | Alias del agente               | Required                       |
+| `SEMANTIC_STRATEGY_ID`   | ID de la estrategia semántica  | `semantic_grace_v1-I25PeS4v8Y` |
+| `BACKEND_WEBHOOK_URL`    | URL del webhook del backend    | Required                       |
+| `WEBHOOK_SECRET`         | Secret para autenticar webhook | Optional                       |
+
+## IAM Permissions
+
+El rol del Lambda necesita:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock-agentcore:CreateEvent",
+        "bedrock-agentcore:ListEvents",
+        "bedrock-agentcore:ListSessions",
+        "bedrock-agentcore:GetEvent",
+        "bedrock-agentcore:DeleteEvent",
+        "bedrock-agentcore:ListActors",
+        "bedrock-agentcore:RetrieveMemoryRecords",
+        "bedrock-agentcore:ListMemoryRecords"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+## Testing
+
+```python
+import boto3
+import json
+
+lambda_client = boto3.client('lambda', region_name='us-east-1')
+
+payload = {
+    "Records": [{
+        "Sns": {
+            "Message": json.dumps({
+                "conversationId": "test-123",
+                "messageId": "msg-123",
+                "userId": "test-user",
+                "text": "Necesito guía espiritual"
+            })
+        }
+    }]
+}
+
+response = lambda_client.invoke(
+    FunctionName='gpbible-bedrock-processor-memory-test',
+    Payload=json.dumps(payload)
+)
+
+print(response['Payload'].read().decode())
+```
+
+## Logs
+
+```bash
+aws logs tail "/aws/lambda/gpbible-bedrock-processor-memory-test" --since 5m --region us-east-1 --profile gpbible
+```
+
+> > > > > > > e07059073ee9a86079964fee604686b5a2bd2418

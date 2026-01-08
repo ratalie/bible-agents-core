@@ -33,6 +33,50 @@ const agentcoreClient = new BedrockAgentCoreClient({
 const MEMORY_ID = process.env.AGENTCORE_MEMORY_ID || "memory_bqdqb-jtj3lc48bl";
 const AGENT_ID = process.env.BEDROCK_AGENT_ID;
 const ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID;
+const SEMANTIC_STRATEGY_ID =
+  process.env.SEMANTIC_STRATEGY_ID || "semantic_grace_v1-I25PeS4v8Y";
+
+/**
+ * Buscar memorias relevantes usando búsqueda semántica
+ */
+async function getSemanticMemory(userId, userMessage, limit = 5) {
+  try {
+    const command = new RetrieveMemoryRecordsCommand({
+      memoryId: MEMORY_ID,
+      namespace: `/strategies/${SEMANTIC_STRATEGY_ID}/actors/${userId}`,
+      searchCriteria: {
+        searchQuery: userMessage,
+        topK: limit,
+      },
+    });
+
+    const response = await agentcoreClient.send(command);
+    const records = response.memoryRecordSummaries || [];
+
+    if (records.length === 0) {
+      return { hasSemanticMemory: false, context: "" };
+    }
+
+    const relevantMemories = records
+      .filter((r) => r.content?.text)
+      .map((r) => r.content.text.substring(0, 300))
+      .slice(0, 3);
+
+    if (relevantMemories.length === 0) {
+      return { hasSemanticMemory: false, context: "" };
+    }
+
+    return {
+      hasSemanticMemory: true,
+      context: `\n\n[Conversaciones relevantes anteriores]\n${relevantMemories.join(
+        "\n---\n"
+      )}\n[Fin de contexto relevante]\n\n`,
+    };
+  } catch (error) {
+    console.log("Semantic search error:", error.message);
+    return { hasSemanticMemory: false, context: "" };
+  }
+}
 
 /**
  * Obtener memoria SOLO de la conversación actual (sessionId) desde AgentCore
