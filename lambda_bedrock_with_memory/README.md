@@ -190,7 +190,6 @@ Usuario dice: ¿Y cuál es el más corto?
   "eventType": "bedrock_response",
   "conversationId": "conv-123",
   "messageId": "ai-msg-456",
-<<<<<<< HEAD
   "responseText": "¡Hola! ¿En qué puedo ayudarte?",
   "timestamp": "2025-01-15T10:30:00.000Z",
   "processingTimeMs": 1250,
@@ -198,15 +197,6 @@ Usuario dice: ¿Y cuál es el más corto?
   "tokensUsed": {
     "input": 150,
     "output": 25
-=======
-  "responseText": "Respuesta del agente...",
-  "hasMemoryContext": true,
-  "hasSemanticContext": true,
-  "processingTimeMs": 2500,
-  "tokensUsed": {
-    "input": 500,
-    "output": 200
->>>>>>> e07059073ee9a86079964fee604686b5a2bd2418
   }
 }
 ```
