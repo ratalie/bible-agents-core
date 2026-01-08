@@ -525,6 +525,39 @@ El rol del Lambda necesita:
 
 ## Testing
 
+### Test Interactivo (Recomendado)
+
+El script `test-interactive.js` permite tener una conversación interactiva con el Lambda desde la terminal:
+
+```bash
+cd lambda_bedrock_with_memory
+node test-interactive.js
+```
+
+**Características:**
+
+- Conversación interactiva en tiempo real
+- Mantiene el contexto de la conversación (mismo `conversationId`)
+- Comandos especiales: `exit`, `quit`, `clear`, `info`
+- Configurable mediante variables de entorno
+
+**Variables de entorno opcionales:**
+
+```bash
+LAMBDA_NAME=gpbible-bedrock-processor-dev \
+TEST_USER_ID=mi-usuario \
+TEST_CONVERSATION_ID=mi-conversacion \
+node test-interactive.js
+```
+
+**Nota:** El Lambda envía las respuestas al webhook configurado. Para ver las respuestas completas, abre otra terminal y ejecuta:
+
+```bash
+aws logs tail /aws/lambda/gpbible-bedrock-processor-dev --follow --region us-east-1
+```
+
+### Test con Python
+
 ```python
 import boto3
 import json
