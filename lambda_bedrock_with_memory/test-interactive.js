@@ -3,7 +3,7 @@
 /**
  * Test interactivo para el Lambda con AgentCore Memory
  * Permite tener una conversación desde la terminal
- * 
+ *
  * Uso: node test-interactive.js
  */
 
@@ -14,7 +14,8 @@ const readline = require("readline");
 const LAMBDA_NAME = process.env.LAMBDA_NAME || "gpbible-bedrock-processor-dev";
 const REGION = process.env.AWS_REGION || "us-east-1";
 const USER_ID = process.env.TEST_USER_ID || `test-user-${Date.now()}`;
-const CONVERSATION_ID = process.env.TEST_CONVERSATION_ID || `test-conv-${Date.now()}`;
+const CONVERSATION_ID =
+  process.env.TEST_CONVERSATION_ID || `test-conv-${Date.now()}`;
 
 // Cliente Lambda
 const lambdaClient = new LambdaClient({ region: REGION });
@@ -62,6 +63,8 @@ async function sendMessage(text) {
     const response = await lambdaClient.send(command);
     const processingTime = Date.now() - startTime;
 
+    console.log(response);
+
     // Decodificar respuesta
     const result = JSON.parse(new TextDecoder().decode(response.Payload));
 
@@ -78,7 +81,7 @@ async function sendMessage(text) {
     // Si el Lambda procesó correctamente, la respuesta puede estar en el resultado
     // o necesitamos verificar los logs
     console.log(`\n✅ Procesado en ${processingTime}ms`);
-    
+
     // El Lambda no retorna la respuesta directamente (la envía al webhook)
     // Pero podemos verificar que se ejecutó correctamente
     if (result.statusCode === 200 || !result.errorMessage) {
