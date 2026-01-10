@@ -14,6 +14,7 @@ Este Lambda de AWS integra **Bedrock Agent** con **AgentCore Memory** para propo
 - ✅ Memoria aislada por conversación (cada `conversationId` tiene su propia sesión)
 - ✅ Recuperación de hasta 30 eventos (mensajes) de la conversación actual
 - ✅ Integración con Bedrock Agent Runtime para respuestas inteligentes
+- ✅ **Sistema de personalidad dinámica** basado en Personality Color (DISC), Spiritual Depth, Age y Language
 - ✅ Webhook al backend para notificar respuestas
 - ✅ Manejo robusto de errores con notificaciones al backend
 
@@ -164,8 +165,118 @@ USER: ¿Cuántos libros tiene?
 ASSISTANT: La Biblia tiene 66 libros en total...
 [Fin de contexto]
 
-Usuario dice: ¿Y cuál es el más corto?
+User says: ¿Y cuál es el más corto?
 ```
+
+---
+
+## Sistema de Personalidad
+
+El Lambda soporta personalización dinámica del agente basada en 4 parámetros del usuario que ajustan el tono, estilo, profundidad e idioma de las respuestas sin modificar el prompt del sistema del Bedrock Agent.
+
+### Parámetros de Personalidad
+
+#### 1. Personality Color (DISC)
+
+El usuario puede seleccionar uno de 4 colores de personalidad basados en el modelo DISC:
+
+| Color         | DISC              | Características                                                  | Estilo de Comunicación                                                          |
+| ------------- | ----------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **🔴 Red**    | Dominant (D)      | Directo, decisivo, orientado a resultados, competitivo, audaz    | Directo y orientado a acción. Se enfoca en resultados y desafía a tomar acción. |
+| **🟡 Yellow** | Influential (I)   | Entusiasta, persuasivo, sociable, creativo, optimista            | Entusiasta y cálido. Usa historias y celebración. Inspira y motiva.             |
+| **🟢 Green**  | Steady (S)        | Calmado, paciente, leal, solidario, buen oyente                  | Paciente y gentil. Proporciona apoyo constante. Toma tiempo para explicar.      |
+| **🔵 Blue**   | Conscientious (C) | Analítico, preciso, orientado a detalles, sistemático, cauteloso | Pensativo y preciso. Proporciona explicaciones detalladas. Muestra profundidad. |
+
+#### 2. Spiritual Depth (Profundidad Espiritual)
+
+Basado en un test que el usuario toma cada 90 días, se calcula un porcentaje (0-100) que se mapea a 10 niveles:
+
+| Nivel | Nombre       | Descripción                           | Enfoque                                                             |
+| ----- | ------------ | ------------------------------------- | ------------------------------------------------------------------- |
+| 1     | Awakening    | Buscador nuevo o reiniciando          | Lenguaje simple, versículos fundamentales, enfoque en amor y gracia |
+| 2     | Exploring    | Curioso, práctica inconsistente       | Fomenta curiosidad, introduce historias clave                       |
+| 3     | Engaging     | Construyendo hábitos básicos          | Ayuda a establecer prácticas regulares                              |
+| 4     | Growing      | Práctica regular emergiendo           | Apoya consistencia creciente                                        |
+| 5     | Rooting      | Fe convirtiéndose en ancla real       | Reconoce fe profunda, guía madura                                   |
+| 6     | Flourishing  | Ritmo diario, alegría aumentando      | Compromiso con ritmo diario                                         |
+| 7     | Anchoring    | Fuerza profunda, mentoría             | Respeta madurez espiritual                                          |
+| 8     | Transforming | Vida siendo transformada              | Enfoque en transformación                                           |
+| 9     | Radiating    | Caminando en autoridad e intimidad    | Nivel experto, conceptos avanzados                                  |
+| 10    | Abiding      | Totalmente rendido, reflejo cristiano | Nivel más profundo, teología compleja                               |
+
+#### 3. Life Stage (Etapa de Vida)
+
+Basado en la edad del usuario, se clasifica en 4 etapas:
+
+| Etapa        | Edades | Descripción                              | Enfoque                                                   |
+| ------------ | ------ | ---------------------------------------- | --------------------------------------------------------- |
+| **Explorer** | 18-29  | Adultos jóvenes explorando fe y vida     | Identidad, propósito, carrera, relaciones, búsqueda de fe |
+| **Builder**  | 30-45  | Adultos construyendo carreras y familias | Desafíos prácticos, balance, prioridades, fundamentos     |
+| **Guide**    | 46-69  | Adultos maduros mentorando a otros       | Legado, impacto, madurez espiritual profunda              |
+| **Legacy**   | 70+    | Seniors dejando impacto duradero         | Reflexión, compartir sabiduría, perspectiva eterna        |
+
+#### 4. Language (Idioma)
+
+El usuario configura su idioma preferido en la aplicación. El agente **siempre responderá en este idioma**, independientemente del idioma en que el usuario escriba.
+
+| Código | Idioma            | Descripción                             |
+| ------ | ----------------- | --------------------------------------- |
+| **en** | English           | El agente responderá siempre en inglés  |
+| **es** | Spanish (Español) | El agente responderá siempre en español |
+
+**Comportamiento:**
+
+- El usuario puede escribir en cualquier idioma
+- El agente siempre responde en el idioma configurado (`language`)
+- Si el usuario escribe en un idioma diferente, el agente lo reconoce pero continúa respondiendo en el idioma configurado
+- El idioma se aplica consistentemente en toda la conversación
+
+### Cómo Funciona
+
+1. **El backend envía `userProfile`** en el mensaje SNS con los 4 parámetros
+2. **El Lambda construye contexto de personalidad** que se inyecta como prefijo al `inputText`
+3. **El Bedrock Agent recibe**:
+   - Su prompt del sistema (ya configurado en AWS Console) - **NO se modifica**
+   - El contexto de personalidad (nuevo) con instrucción de idioma al inicio
+   - La memoria de conversación (existente)
+   - El mensaje del usuario
+4. **El agente ajusta** tono, estilo, profundidad e idioma según la personalidad, pero **mantiene** toda su estructura base (greetings, formato de versículos, protocolos, etc.)
+
+### Ejemplo de Uso
+
+**Mensaje SNS con personalidad:**
+
+```json
+{
+  "conversationId": "conv-123",
+  "messageId": "msg-456",
+  "userId": "user-789",
+  "text": "Necesito guía sobre el estrés laboral",
+  "userProfile": {
+    "personalityColor": "red",
+    "spiritualDepthPercent": 45,
+    "age": 35,
+    "language": "es"
+  }
+}
+```
+
+**Resultado:**
+
+- El agente responderá con tono **directo y orientado a acción** (Red)
+- Enfocará en **desafíos prácticos y balance** (Builder, 35 años)
+- Usará **profundidad teológica moderada** (Level 5, 45%)
+- Responderá **siempre en español** (language: "es"), incluso si el usuario escribe en inglés
+- Mantendrá su estructura completa (greeting, versículos, reflexión, etc.)
+
+### Compatibilidad
+
+- Si **no se envía `userProfile`**, el Lambda funciona normalmente (backward compatible)
+- La personalidad se aplica **por mensaje**, permitiendo cambios dinámicos
+- El contexto de personalidad es **complementario**, no reemplaza el prompt del sistema
+- Si **no se especifica `language`**, el default es inglés ("en")
+
+---
 
 ### Estructura de Datos
 
@@ -176,12 +287,24 @@ Usuario dice: ¿Y cuál es el más corto?
   "Records": [
     {
       "Sns": {
-        "Message": "{\"conversationId\":\"conv-123\",\"messageId\":\"msg-456\",\"userId\":\"user-789\",\"text\":\"Hola\"}"
+        "Message": "{\"conversationId\":\"conv-123\",\"messageId\":\"msg-456\",\"userId\":\"user-789\",\"text\":\"Hola\",\"userProfile\":{\"personalityColor\":\"red\",\"spiritualDepthPercent\":45,\"age\":35,\"language\":\"es\"}}"
       }
     }
   ]
 }
 ```
+
+**Campos del mensaje:**
+
+- `conversationId`: ID único de la conversación
+- `messageId`: ID único del mensaje
+- `userId`: ID del usuario
+- `text`: Texto del mensaje del usuario
+- `userProfile` (opcional): Perfil de personalidad
+  - `personalityColor`: "red", "yellow", "green", o "blue"
+  - `spiritualDepthPercent`: 0-100 (porcentaje de profundidad espiritual)
+  - `age`: Edad del usuario (18-120)
+  - `language`: "en" o "es" (idioma preferido del usuario - el agente siempre responderá en este idioma)
 
 #### Respuesta al Backend (Salida)
 
@@ -447,7 +570,65 @@ app.post("/webhook/bedrock-response", async (req, res) => {
 
 ## Despliegue
 
-Ver el script `deploy.ps1` para instrucciones de despliegue automatizado.
+### Despliegue de Nueva Lambda (Recomendado)
+
+Para crear una nueva Lambda desde cero, usa el script `deploy-new.sh`:
+
+```bash
+cd lambda_bedrock_with_memory
+./deploy-new.sh
+```
+
+El script te pedirá:
+
+- **Bedrock Agent ID**: ID de tu Bedrock Agent
+- **Bedrock Agent Alias ID**: Alias ID de tu Bedrock Agent
+- **SNS Topic Name o ARN**: Nombre del SNS Topic o ARN completo
+- **Backend Webhook URL** (opcional): URL del webhook para recibir respuestas
+
+**El script automáticamente:**
+
+1. Crea el rol IAM con todos los permisos necesarios
+2. Instala dependencias npm
+3. Crea el paquete ZIP con el código
+4. Crea la función Lambda `gpbible-ai-agent-dev`
+5. Configura todas las variables de entorno
+6. Configura el trigger SNS
+
+**Requisitos previos:**
+
+- AWS CLI configurado con credenciales válidas
+- Permisos para crear roles IAM, funciones Lambda y suscripciones SNS
+- Node.js y npm instalados
+
+### Actualizar Lambda Existente
+
+Para actualizar una Lambda existente, usa el script `deploy.ps1` (Windows/PowerShell) o crea un script similar para Mac/Linux:
+
+```bash
+# 1. Instalar dependencias
+npm install
+
+# 2. Crear paquete
+zip -r lambda.zip index.js package.json node_modules/ personality/
+
+# 3. Actualizar Lambda
+aws lambda update-function-code \
+    --function-name gpbible-ai-agent-dev \
+    --zip-file fileb://lambda.zip \
+    --region us-east-1
+
+# 4. Actualizar variables de entorno (si es necesario)
+aws lambda update-function-configuration \
+    --function-name gpbible-ai-agent-dev \
+    --environment "Variables={
+        AGENTCORE_MEMORY_ID=memory_bqdqb-jtj3lc48bl,
+        BEDROCK_AGENT_ID=TU_AGENT_ID,
+        BEDROCK_AGENT_ALIAS_ID=TU_ALIAS_ID,
+        AWS_REGION=us-east-1
+    }" \
+    --region us-east-1
+```
 
 ### Despliegue Manual
 

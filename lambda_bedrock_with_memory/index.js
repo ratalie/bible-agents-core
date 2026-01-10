@@ -186,7 +186,7 @@ exports.handler = async (event) => {
 
     try {
       const message = JSON.parse(record.Sns.Message);
-      const { conversationId, messageId, userId, text } = message;
+      const { conversationId, messageId, userId, text, userProfile } = message;
 
       console.log(`Processing message ${messageId} for user ${userId}`);
 
@@ -208,12 +208,32 @@ exports.handler = async (event) => {
         console.log("ℹ️ No previous memory for this conversation");
       }
 
-      // 2. Construir prompt con contexto de memoria
-      const enrichedText = memory.hasMemory
-        ? `${memory.context}Usuario dice: ${text}`
+      // 2. Construir contexto de personalidad (si viene userProfile)
+      let personalityContext = "";
+      if (userProfile) {
+        const {
+          buildPersonalityContext,
+        } = require("./personality/personality-context");
+        personalityContext = buildPersonalityContext(userProfile);
+        console.log(
+          `🎭 Personality: ${userProfile.personalityColor}, Age: ${
+            userProfile.age
+          }, Spiritual: ${userProfile.spiritualDepthPercent}%, Language: ${
+            userProfile.language || "en"
+          }`
+        );
+      }
+
+      // 3. Construir prompt enriquecido con personalidad y memoria
+      const enrichedText = personalityContext
+        ? `${personalityContext}\n\n${
+            memory.hasMemory ? memory.context : ""
+          }\n\nUser says: ${text}`
+        : memory.hasMemory
+        ? `${memory.context}User says: ${text}`
         : text;
 
-      // 3. Llamar a Bedrock Agent
+      // 4. Llamar a Bedrock Agent
       console.log("🤖 Invoking Bedrock Agent...");
       const command = new InvokeAgentCommand({
         agentId: AGENT_ID,
@@ -228,17 +248,17 @@ exports.handler = async (event) => {
         throw new Error("No completion received from Bedrock");
       }
 
-      // 4. Procesar respuesta
+      // 5. Procesar respuesta
       const responseText = await processStream(response.completion);
       const processingTime = Date.now() - startTime;
 
       console.log(`Response received in ${processingTime}ms`);
 
-      // 5. Guardar en AgentCore Memory
+      // 6. Guardar en AgentCore Memory
       console.log("💾 Saving to AgentCore Memory...");
       await saveToMemory(userId, sessionId, text, responseText);
 
-      // 6. Enviar respuesta al backend
+      // 7. Enviar respuesta al backend
       await sendToBackend({
         eventType: "bedrock_response",
         conversationId,
